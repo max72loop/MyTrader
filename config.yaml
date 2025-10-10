@@ -1,0 +1,64 @@
+# Dossiers de sortie
+output_dir: "data"
+scores_history_file: "data/scores_history.csv"
+
+# Colonnes de features (pour le calcul de confiance)
+feature_columns:
+  momentum: ["mom_3m", "mom_6m"]
+  valuation: ["pe_ttm", "fcf_yield", "pb_ratio"]
+  growth: ["rev_cagr_3y", "eps_cagr_3y", "revenue_yoy", "eps_yoy_1y"]
+  quality: ["gross_margin_ttm", "oper_margin", "roe", "roa", "roic_ttm"]
+  risk: ["beta_spx", "net_debt_ebitda", "volatility_30d", "debt_equity"]
+
+# Profils d'agrégation
+profiles:
+  growth:
+    weights:
+      momentum: 0.25
+      valuation: 0.10
+      growth:   0.35
+      quality:  0.20
+      risk:     0.10
+    ema_halflife_days: 10
+  value:
+    weights:
+      momentum: 0.15
+      valuation: 0.35
+      growth:   0.15
+      quality:  0.25
+      risk:     0.10
+    ema_halflife_days: 14
+  blend:
+    weights:
+      momentum: 0.22
+      valuation: 0.20
+      growth:   0.23
+      quality:  0.20
+      risk:     0.15
+    ema_halflife_days: 12
+  turnaround:
+    weights:
+      momentum: 0.28
+      valuation: 0.22
+      growth:   0.20
+      quality:  0.15
+      risk:     0.15
+    ema_halflife_days: 10
+
+# Pénalités / Bonus liés aux événements
+penalties:
+  earnings_miss_threshold_pct: -5      # Surprise EPS < -5% → pénalité
+  earnings_miss_points: -5
+  high_leverage_threshold: 3           # Net Debt/EBITDA > 3 → pénalité
+  high_leverage_points: -4
+
+bonuses:
+  eps_growth_strong_threshold_pct: 15  # EPS YoY > +15% → bonus
+  eps_growth_strong_points: 3
+  insider_buy_points: 2
+
+# Pondérations pour la "confiance"
+confidence_weights:
+  data_completeness: 0.45
+  recency: 0.30
+  volatility: 0.25
