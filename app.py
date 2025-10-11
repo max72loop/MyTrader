@@ -1,3 +1,11 @@
+# -- Make 'App/' importable (so 'ui', 'data', 'pages' can be found) --
+import sys, pathlib
+ROOT = pathlib.Path(__file__).resolve().parent
+APP_DIR = ROOT / "App"
+if str(APP_DIR) not in sys.path:
+    sys.path.insert(0, str(APP_DIR))
+
+
 import streamlit as st
 from ui.styles import inject_global_css, set_page_config
 from data.loaders import load_config, load_data

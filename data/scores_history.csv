@@ -19,3 +19,23 @@ ATAT,Atour Lifestyle,Hospitality,China,Growth,-0.329,0.14,0.897,-0.002,-0.12,0.2
 SE,Sea Ltd,Ecommerce/Fintech,Asia,Growth,0.499,0.213,0.9,-0.233,0.682,0.483,3.0,3.483,growth,10-10-25
 TKO,TKO Group Holdings,Media & Sports,US,Blend,0.112,0.122,0.35,0.117,0.033,0.189,0.0,0.189,growth,10-10-25
 D05.SI, DBS Group Holdings Ltd, Bank,Singapour,,0.39,-0.216,-0.385,-0.433,-1.238,-0.269,0.0,-0.269,growth,10-10-25
+SPHR,Sphere Entertainment,Entertainment,US,Turnaround,1.0,-0.808,0.343,-0.788,0.706,0.202,0.0,0.202,growth,11-10-25
+TSM,TSMC,Semiconductors,Asia,Blend,0.544,0.55,0.247,0.704,0.197,0.438,3.0,3.438,growth,11-10-25
+BAKKA.OL,Bakkafrost,Food,Europe,Value,-0.08,0.375,-0.763,-0.092,0.14,-0.254,0.0,-0.254,growth,11-10-25
+UBER,Uber Technologies,Mobility,US,Growth,-0.308,-0.255,1.344,0.146,0.11,0.408,3.0,3.408,growth,11-10-25
+GRAB,Grab Holdings,SuperApp,Asia,Growth,0.441,0.784,-0.629,-0.474,-0.331,-0.159,0.0,-0.159,growth,11-10-25
+ZTS,Zoetis,Healthcare,US,Blend,-0.569,-0.212,-0.459,0.901,-0.464,-0.19,0.0,-0.19,growth,11-10-25
+NU,Nu Holdings,Fintech,LatAm,Growth,0.286,-0.141,0.799,-0.285,0.491,0.329,3.0,3.329,growth,11-10-25
+BYD,BYD Company,Automotive,China,Growth,-0.348,-0.238,-0.591,0.12,-0.065,-0.3,0.0,-0.3,growth,11-10-25
+PYPL,PayPal,Fintech,US,Blend,-0.464,-0.209,-0.533,-0.0,0.177,-0.306,0.0,-0.306,growth,11-10-25
+GOOGL,Alphabet,Tech,US,Blend,0.92,-0.225,-0.194,1.158,-0.099,0.361,3.0,3.361,growth,11-10-25
+PEP,PepsiCo,Consumer Defensive,US,Value,0.18,-0.193,-0.635,0.035,-0.565,-0.246,0.0,-0.246,growth,11-10-25
+1810.HK,Xiaomi,Consumer Electronics,China,Growth,-0.517,0.426,0.269,-1.291,-0.082,-0.259,3.0,2.741,growth,11-10-25
+MELI,MercadoLibre,Ecommerce/Fintech,LatAm,Growth,-0.58,0.023,0.605,-0.145,0.033,0.043,3.0,3.043,growth,11-10-25
+AMZN,Amazon,Ecommerce,US,Growth,-0.292,-0.2,0.027,0.059,0.174,-0.054,3.0,2.946,growth,11-10-25
+MQ,Marqeta,Fintech,US,Growth,-0.71,-0.621,-1.55,-0.281,0.516,-0.787,0.0,-0.787,growth,11-10-25
+ASR,Grupo Aeroportuario del Sureste,Infrastructure,LatAm,Value,-0.216,0.754,-0.044,0.354,-0.465,0.03,3.0,3.03,growth,11-10-25
+ATAT,Atour Lifestyle,Hospitality,China,Growth,-0.312,0.135,0.897,-0.002,-0.131,0.236,3.0,3.236,growth,11-10-25
+SE,Sea Ltd,Ecommerce/Fintech,Asia,Growth,0.506,0.216,0.9,-0.233,0.683,0.485,3.0,3.485,growth,11-10-25
+TKO,TKO Group Holdings,Media & Sports,US,Blend,0.087,0.122,0.35,0.117,0.028,0.183,0.0,0.183,growth,11-10-25
+D05.SI, DBS Group Holdings Ltd, Bank,Singapour,,0.432,-0.215,-0.385,-0.433,-1.241,-0.259,0.0,-0.259,growth,11-10-25

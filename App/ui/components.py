@@ -1,66 +1,101 @@
-# app/ui/components.py
-st.markdown(
-f"<span class='category-badge {CATEGORY_INFO[cat]['badge_class']}'>{CATEGORY_INFO[cat]['nom']}</span>",
-unsafe_allow_html=True,
-)
+# App/ui/components.py
+import streamlit as st
 
 
-def show_column_legend_clear(df: pd.DataFrame):
-st.markdown("### 📖 Guide des Indicateurs")
-categories: dict[str, list[str]] = {}
-for col in df.columns:
-info = COLUMN_DESCRIPTIONS.get(col, {"categorie": "autre"})
-categories.setdefault(info.get("categorie","autre"), []).append(col)
-for cat_key in ["score","momentum","valuation","growth","quality","risk","identité","évolution","autre"]:
-if cat_key in categories:
-if cat_key in CATEGORY_INFO:
-cat_info = CATEGORY_INFO[cat_key]
-st.markdown(f"#### {cat_info['nom']}")
-st.caption(cat_info['desc'])
-else:
-st.markdown(f"#### {cat_key.capitalize()}")
-cols = st.columns(min(5, len(categories[cat_key])))
-for i, col_name in enumerate(categories[cat_key]):
-with cols[i % 5]:
-show_info_tooltip(col_name)
-st.markdown("---")
-
-
-def sidebar(df_feats: pd.DataFrame, df_today: pd.DataFrame):
-with st.sidebar:
-st.image("https://via.placeholder.com/200x80/667eea/ffffff?text=AI+Invest", use_container_width=True)
-st.markdown("# 📊 Tableau de Bord")
-st.markdown("---")
-if not df_today.empty:
-st.markdown("### 📈 Vue d'ensemble")
-c1, c2 = st.columns(2)
-with c1: st.metric("Titres", len(df_today))
-with c2: st.metric("Score Moy", f"{df_today['score'].mean():.1f}")
-if 'profile' in df_today.columns:
-st.success(f"**Profil:** {df_today['profile'].iloc[0].upper()}")
-st.markdown("---")
-st.markdown("### 🔍 Filtres")
-sectors = sorted(df_feats["sector"].dropna().unique().tolist()) if not df_feats.empty and "sector" in df_feats.columns else []
-sectors_sel = st.multiselect("📁 Secteurs", sectors, default=sectors[:3] if len(sectors)>=3 else sectors, key="sectors")
-regions = sorted(df_feats["region"].dropna().unique().tolist()) if not df_feats.empty and "region" in df_feats.columns else []
-regions_sel = st.multiselect("🌍 Régions", regions, default=[], key="regions")
-st.markdown("---")
-if st.button("🔄 Actualiser", use_container_width=True):
-from ..data.loaders import load_data
-load_data.clear()
-st.rerun()
-with st.expander("❓ Aide Rapide"):
-st.markdown("1. Filtrez par secteur/région ")
-st.markdown("2. Consultez le classement ")
-st.markdown("3. Analysez un titre en détail ")
-st.markdown("4. Suivez l'évolution")
-return sectors_sel, regions_sel
+def sidebar(df_feats, df_today):
+    """Barre latérale avec explications et filtres"""
+    with st.sidebar:
+        st.markdown("### 📖 Guide des Indicateurs")
+        st.markdown("- **Momentum** : tendance du cours sur 6 à 12 mois")
+        st.markdown("- **Volatilité** : amplitude moyenne des variations du titre")
+        st.markdown("- **Value** : niveau de valorisation (PER, EV/EBITDA, etc.)")
+        st.markdown("- **Quality** : rentabilité, marges, dette, ROIC, etc.")
+        st.markdown("- **Growth** : croissance du chiffre d'affaires et du bénéfice")
+        st.markdown("- **Turnaround** : amélioration récente des fondamentaux")
+        st.markdown("---")
+        
+        # Filtres
+        st.markdown("### 🔍 Filtres")
+        
+        sectors_sel = []
+        regions_sel = []
+        
+        # Filtre secteur
+        if "sector" in df_today.columns:
+            all_sectors = sorted(df_today["sector"].dropna().unique().tolist())
+            if all_sectors:
+                sectors_sel = st.multiselect(
+                    "Secteurs",
+                    options=all_sectors,
+                    default=all_sectors,
+                    help="Sélectionnez les secteurs à analyser"
+                )
+        
+        # Filtre région
+        if "region" in df_today.columns:
+            all_regions = sorted(df_today["region"].dropna().unique().tolist())
+            if all_regions:
+                regions_sel = st.multiselect(
+                    "Régions",
+                    options=all_regions,
+                    default=all_regions,
+                    help="Sélectionnez les régions à analyser"
+                )
+        
+        st.markdown("---")
+        st.markdown("💡 *Les scores combinent ces indicateurs pour classer les actions selon ton profil d'investisseur.*")
+    
+    return sectors_sel, regions_sel
 
 
 def header():
-st.markdown("""
-<div class="section-header">
-<h2>🎯 AI Invest Assistant - Analyse Quantitative</h2>
-</div>
-""", unsafe_allow_html=True)
-st.info("💡 **Astuce:** Cliquez sur les boutons 💡 pour comprendre chaque indicateur en détail")
+    """En-tête principal du dashboard"""
+    st.markdown(
+        """
+        <div style="text-align:center; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+        border-radius: 16px; margin-bottom: 2rem; color: white; box-shadow: 0 4px 12px rgba(102,126,234,0.3);">
+            <h1 style="margin: 0; font-size: 2.5rem;">📊 AI Invest Assistant</h1>
+            <p style="margin: 1rem 0 0 0; font-size: 1.1rem; opacity: 0.9;">
+                Analyse quantitative multi-facteurs pour l'investissement intelligent
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def show_column_legend_clear(df):
+    """Affiche la légende des colonnes disponibles dans le DataFrame"""
+    legends = {
+        "mom_3m": "📈 Momentum 3 mois - Performance sur 3 mois (%)",
+        "mom_6m": "📈 Momentum 6 mois - Performance sur 6 mois (%)",
+        "beta_spx": "📊 Beta S&P500 - Sensibilité au marché",
+        "volatility_30d": "📉 Volatilité - Risque annualisé",
+        "pe_ttm": "💰 PER - Price/Earnings ratio",
+        "fcf_yield": "💵 FCF Yield - Free Cash Flow / Market Cap (%)",
+        "pb_ratio": "📊 P/B - Price to Book ratio",
+        "revenue_yoy": "📈 Croissance CA - Revenus année sur année (%)",
+        "eps_yoy_1y": "💹 Croissance EPS - Bénéfice par action YoY (%)",
+        "gross_margin_ttm": "💼 Marge Brute - Rentabilité brute (%)",
+        "oper_margin": "💼 Marge Opérationnelle (%)",
+        "roe": "💰 ROE - Return on Equity (%)",
+        "roa": "💰 ROA - Return on Assets (%)",
+        "roic_ttm": "💰 ROIC - Return on Invested Capital (%)",
+        "net_debt_ebitda": "⚠️ Dette Nette/EBITDA - Levier financier",
+        "debt_equity": "⚠️ Dette/Equity - Endettement",
+        "score": "🎯 Score Global - Score composite",
+        "z_momentum": "📊 Z-Score Momentum",
+        "z_valuation": "📊 Z-Score Valorisation",
+        "z_growth": "📊 Z-Score Croissance",
+        "z_quality": "📊 Z-Score Qualité",
+        "z_risk": "📊 Z-Score Risque",
+    }
+    
+    available_cols = [col for col in legends.keys() if col in df.columns]
+    
+    if available_cols:
+        st.markdown("#### 📚 Légende des Indicateurs")
+        for col in available_cols:
+            st.markdown(f"**{col}** : {legends[col]}")
+    else:
+        st.info("Aucun indicateur disponible pour afficher la légende")

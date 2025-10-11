@@ -1,48 +1,60 @@
-# app/data/loaders.py
-import os
-import yaml
+# App/data/loaders.py
 import pandas as pd
-import streamlit as st
+import yaml
+from pathlib import Path
 
 
-from .formatting import dataframe_to_percent, is_percent_column, to_percent_str, looks_like_fraction
+def load_config(config_path="config.yaml"):
+    """Charge la configuration depuis config.yaml"""
+    with open(config_path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 
-__all__ = [
-"load_config","load_data","apply_filters",
-"dataframe_to_percent","is_percent_column","to_percent_str","looks_like_fraction",
-]
+def load_data(data_dir="data"):
+    """Charge les fichiers de données nécessaires au dashboard"""
+    data_path = Path(data_dir)
+    
+    # Charger features_latest.csv
+    features_file = data_path / "features_latest.csv"
+    if features_file.exists():
+        df_feats = pd.read_csv(features_file)
+    else:
+        df_feats = pd.DataFrame()
+    
+    # Charger scores_today.csv
+    scores_file = data_path / "scores_today.csv"
+    if scores_file.exists():
+        df_today = pd.read_csv(scores_file)
+    else:
+        df_today = pd.DataFrame()
+    
+    # Charger scores_history.csv
+    history_file = data_path / "scores_history.csv"
+    if history_file.exists():
+        df_hist = pd.read_csv(history_file)
+    else:
+        df_hist = pd.DataFrame()
+    
+    return df_feats, df_today, df_hist
 
 
-def load_config():
-try:
-if os.path.exists("config.yaml"):
-with open("config.yaml","r",encoding="utf-8") as f:
-return yaml.safe_load(f)
-except Exception as e:
-st.sidebar.error(f"Erreur config: {e}")
-return {}
+def apply_filters(df, sectors_sel=None, regions_sel=None):
+    """Applique les filtres de secteur et région au DataFrame"""
+    filtered = df.copy()
+    
+    if sectors_sel and len(sectors_sel) > 0 and "sector" in df.columns:
+        filtered = filtered[filtered["sector"].isin(sectors_sel)]
+    
+    if regions_sel and len(regions_sel) > 0 and "region" in df.columns:
+        filtered = filtered[filtered["region"].isin(regions_sel)]
+    
+    return filtered
 
 
-@st.cache_data
-def load_data():
-feats_latest = os.path.join("data","features_latest.csv")
-scores_today = os.path.join("data","scores_today.csv")
-scores_hist = os.path.join("data","scores_history.csv")
-
-
-df_feats = pd.read_csv(feats_latest) if os.path.exists(feats_latest) else pd.DataFrame()
-df_today = pd.read_csv(scores_today) if os.path.exists(scores_today) else pd.DataFrame()
-df_hist = pd.read_csv(scores_hist) if os.path.exists(scores_hist) else pd.DataFrame()
-return df_feats, df_today, df_hist
-
-
-def apply_filters(df, sectors_sel, regions_sel):
-if df is None or df.empty:
-return df
-mask = pd.Series(True, index=df.index)
-if sectors_sel and "sector" in df.columns:
-mask &= df["sector"].isin(sectors_sel)
-if regions_sel and "region" in df.columns:
-mask &= df["region"].isin(regions_sel)
-return df[mask].copy()
+def dataframe_to_percent(df, digits=2):
+    """Formate les colonnes numériques du DataFrame"""
+    df_copy = df.copy()
+    for col in df_copy.columns:
+        if pd.api.types.is_numeric_dtype(df_copy[col]):
+            df_copy[col] = df_copy[col].round(digits)
+    return df_copy

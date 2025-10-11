@@ -42,8 +42,8 @@ GLOBAL_CSS = r"""
 
 
 def set_page_config():
-st.set_page_config(**PAGE_CFG)
+    st.set_page_config(**PAGE_CFG)
 
 
 def inject_global_css():
-st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
+    st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
