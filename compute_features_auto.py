@@ -1,17 +1,25 @@
 """
-compute_features_auto.py
-------------------------
+compute_features_auto.py - VERSION AMÉLIORÉE
+---------------------------------------------
 Télécharge les données de marché & fondamentaux pour les tickers listés
-dans companies.csv, calcule des features standardisées et génère :
+dans companies.csv, calcule des features standardisées avec PLUS de pourcentages
+et génère :
 
 - data/features_today_DD-MM-YY.csv
 - data/features_latest.csv (alias du plus récent)
 
+NOUVEAUTÉS :
+- ROE, ROA, ROIC en %
+- Marges (brute, opérationnelle, nette) en %
+- Croissance revenues et EPS sur 1, 3, 5 ans en %
+- Rendement du dividende en %
+- Payout ratio en %
+- Asset turnover ratio
+- Current ratio et Quick ratio
+- Free Cash Flow margin en %
+
 Usage :
     python compute_features_auto.py --companies companies.csv --outdir data
-
-Dépendances :
-    pip install yfinance pandas numpy statsmodels tqdm
 """
 
 import argparse
@@ -40,6 +48,16 @@ def safe_div(a, b):
         return np.nan
 
 
+def cagr(start_val, end_val, periods):
+    """Calcule le CAGR (Compound Annual Growth Rate) en %"""
+    try:
+        if pd.isna(start_val) or pd.isna(end_val) or start_val <= 0 or end_val <= 0 or periods <= 0:
+            return np.nan
+        return (pow(end_val / start_val, 1 / periods) - 1) * 100
+    except Exception:
+        return np.nan
+
+
 def momentum(ticker: str, months: int = 3) -> float:
     """Rendement simple sur ~22 jours boursiers * months (approx)."""
     try:
@@ -56,13 +74,13 @@ def momentum(ticker: str, months: int = 3) -> float:
 
 
 def annualized_vol(ticker: str, period: str = "6mo") -> float:
-    """Volatilité annualisée = std(ret) * sqrt(252)."""
+    """Volatilité annualisée = std(ret) * sqrt(252) en %."""
     try:
         px = yf.download(
             ticker, period=period, interval="1d", auto_adjust=True, progress=False
         )["Close"]
         r = px.pct_change().dropna()
-        return float(r.std() * np.sqrt(252))
+        return float(r.std() * np.sqrt(252) * 100)  # en %
     except Exception:
         return np.nan
 
@@ -71,7 +89,6 @@ def compute_beta(ticker: str, ref: str = "^GSPC", period: str = "1y") -> float:
     """Beta par régression OLS vs indice ref (par défaut S&P 500)."""
     try:
         px = yf.download([ticker, ref], period=period, interval="1d", auto_adjust=True, progress=False)
-        # MultiIndex -> garder Close
         if isinstance(px.columns, pd.MultiIndex):
             px = px["Close"]
         px = px.dropna(how="any")
@@ -89,177 +106,268 @@ def compute_beta(ticker: str, ref: str = "^GSPC", period: str = "1y") -> float:
         return np.nan
 
 
-# --------- Fundamentals (via yfinance) ---------
+# --------- Fundamentals AMÉLIORÉS ---------
 def fundamentals_features(ticker: str) -> dict:
     """
     Récupère des comptes (ttm approx via quarterly) et calcule des ratios.
-    NB : yfinance peut retourner des champs manquants selon les titres.
+    VERSION AMÉLIORÉE avec plus de pourcentages.
     """
     feats = {
-        # Momentum / Marché
+        # === Momentum / Marché ===
+        "mom_1m": np.nan,
         "mom_3m": np.nan,
         "mom_6m": np.nan,
+        "mom_12m": np.nan,
         "beta_spx": np.nan,
         "volatility_30d": np.nan,
-        # Valorisation
+        
+        # === Valorisation ===
         "pe_ttm": np.nan,
-        "fcf_yield": np.nan,
+        "pe_forward": np.nan,
+        "peg_ratio": np.nan,
+        "ps_ratio": np.nan,  # Price/Sales
         "pb_ratio": np.nan,
-        # Croissance
+        "ev_ebitda": np.nan,
+        "fcf_yield": np.nan,  # %
+        "earnings_yield": np.nan,  # %
+        "dividend_yield": np.nan,  # %
+        
+        # === Croissance (en %) ===
         "revenue_yoy": np.nan,
-        "eps_yoy_1y": np.nan,
-        # Qualité
-        "gross_margin_ttm": np.nan,
-        "oper_margin": np.nan,
-        "roe": np.nan,
-        "roa": np.nan,
-        "roic_ttm": np.nan,
-        # Risque / Leverage
+        "revenue_cagr_3y": np.nan,
+        "revenue_cagr_5y": np.nan,
+        "eps_yoy": np.nan,
+        "eps_cagr_3y": np.nan,
+        "eps_cagr_5y": np.nan,
+        "ebitda_yoy": np.nan,
+        "fcf_yoy": np.nan,
+        
+        # === Qualité / Marges (en %) ===
+        "gross_margin": np.nan,
+        "operating_margin": np.nan,
+        "net_margin": np.nan,
+        "ebitda_margin": np.nan,
+        "fcf_margin": np.nan,
+        "roe": np.nan,  # %
+        "roa": np.nan,  # %
+        "roic": np.nan,  # %
+        "roc": np.nan,  # Return on Capital %
+        
+        # === Efficacité ===
+        "asset_turnover": np.nan,
+        "inventory_turnover": np.nan,
+        "receivables_turnover": np.nan,
+        
+        # === Risque / Leverage ===
+        "debt_to_equity": np.nan,
+        "debt_to_assets": np.nan,  # %
         "net_debt_ebitda": np.nan,
-        "debt_equity": np.nan,
+        "interest_coverage": np.nan,
+        "current_ratio": np.nan,
+        "quick_ratio": np.nan,
+        
+        # === Dividendes ===
+        "payout_ratio": np.nan,  # %
+        "dividend_growth_5y": np.nan,  # % CAGR
     }
 
     try:
         tk = yf.Ticker(ticker)
-        # fast_info (peut manquer certains champs)
+        info = tk.info
         finfo = getattr(tk, "fast_info", None)
-        shares = getattr(finfo, "shares", None) if finfo is not None else None
-        mcap = getattr(finfo, "market_cap", None) if finfo is not None else None
-        last_price = getattr(finfo, "last_price", None) if finfo is not None else None
-
-        # États financiers (peuvent être vides selon titre)
-        fin_q = tk.quarterly_financials  # Income Statement trimestriel
+        
+        # Données de base
+        shares = info.get("sharesOutstanding") or (getattr(finfo, "shares", None) if finfo else None)
+        mcap = info.get("marketCap") or (getattr(finfo, "market_cap", None) if finfo else None)
+        last_price = info.get("currentPrice") or (getattr(finfo, "last_price", None) if finfo else None)
+        
+        # États financiers
+        fin_q = tk.quarterly_financials
+        fin_a = tk.financials
         bs_q = tk.quarterly_balance_sheet
+        bs_a = tk.balance_sheet
         cf_q = tk.quarterly_cashflow
-        fin_a = tk.financials  # annuel (parfois plus fourni)
+        cf_a = tk.cashflow
 
-        # ---------- Marges ----------
-        revenue_ttm = np.nan
-        operating_income_ttm = np.nan
-        gross_profit_ttm = np.nan
-        net_income_ttm = np.nan
+        # ========== MOMENTUM ==========
+        feats["mom_1m"] = momentum(ticker, months=1)
+        feats["mom_3m"] = momentum(ticker, months=3)
+        feats["mom_6m"] = momentum(ticker, months=6)
+        feats["mom_12m"] = momentum(ticker, months=12)
 
-        # Utilise trimestriel si dispo, sinon annuel
-        try:
-            if fin_q is not None and not fin_q.empty:
-                # Somme des 4 derniers trimestres
-                def _sum_last4(df, row):
-                    if row in df.index:
-                        return df.loc[row].iloc[:4].sum(min_count=1)
-                    return np.nan
+        # ========== VALORISATION ==========
+        feats["pe_ttm"] = info.get("trailingPE")
+        feats["pe_forward"] = info.get("forwardPE")
+        feats["peg_ratio"] = info.get("pegRatio")
+        feats["ps_ratio"] = info.get("priceToSalesTrailing12Months")
+        feats["pb_ratio"] = info.get("priceToBook")
+        feats["ev_ebitda"] = info.get("enterpriseToEbitda")
+        
+        # Dividend Yield
+        feats["dividend_yield"] = info.get("dividendYield")
+        if feats["dividend_yield"] and not pd.isna(feats["dividend_yield"]):
+            feats["dividend_yield"] *= 100  # Convertir en %
+        
+        # Earnings Yield = 1/PE
+        if feats["pe_ttm"] and feats["pe_ttm"] > 0:
+            feats["earnings_yield"] = (1 / feats["pe_ttm"]) * 100
 
-                revenue_ttm = _sum_last4(fin_q, "Total Revenue")
-                operating_income_ttm = _sum_last4(fin_q, "Operating Income")
-                gross_profit_ttm = _sum_last4(fin_q, "Gross Profit")
-                net_income_ttm = _sum_last4(fin_q, "Net Income")
-            elif fin_a is not None and not fin_a.empty:
-                # Si on n'a que l'annuel, prend dernière colonne
-                def _last(df, row):
-                    if row in df.index:
-                        return df.loc[row].iloc[0]
-                    return np.nan
+        # ========== REVENUS & CROISSANCE ==========
+        def _sum_last4(df, row):
+            if df is not None and not df.empty and row in df.index:
+                return df.loc[row].iloc[:4].sum(min_count=1)
+            return np.nan
+        
+        def _get_annual(df, row, col_idx=0):
+            if df is not None and not df.empty and row in df.index and df.shape[1] > col_idx:
+                return df.loc[row].iloc[col_idx]
+            return np.nan
 
-                revenue_ttm = _last(fin_a, "Total Revenue")
-                operating_income_ttm = _last(fin_a, "Operating Income")
-                gross_profit_ttm = _last(fin_a, "Gross Profit")
-                net_income_ttm = _last(fin_a, "Net Income")
-        except Exception:
-            pass
+        # Revenus TTM
+        revenue_ttm = _sum_last4(fin_q, "Total Revenue") if fin_q is not None else _get_annual(fin_a, "Total Revenue")
+        
+        # Croissance Revenus
+        if fin_a is not None and not fin_a.empty and "Total Revenue" in fin_a.index:
+            rev_history = fin_a.loc["Total Revenue"].dropna().sort_index(ascending=False)
+            if len(rev_history) >= 2:
+                feats["revenue_yoy"] = ((rev_history.iloc[0] / rev_history.iloc[1]) - 1) * 100
+            if len(rev_history) >= 4:
+                feats["revenue_cagr_3y"] = cagr(rev_history.iloc[3], rev_history.iloc[0], 3)
+            if len(rev_history) >= 6:
+                feats["revenue_cagr_5y"] = cagr(rev_history.iloc[5], rev_history.iloc[0], 5)
 
-        # Gross margin & Operating margin
-        if pd.notna(revenue_ttm) and revenue_ttm != 0:
-            if pd.notna(gross_profit_ttm):
-                feats["gross_margin_ttm"] = safe_div(gross_profit_ttm, revenue_ttm) * 100.0
-            if pd.notna(operating_income_ttm):
-                feats["oper_margin"] = safe_div(operating_income_ttm, revenue_ttm) * 100.0
+        # Net Income TTM
+        net_income_ttm = _sum_last4(fin_q, "Net Income") if fin_q is not None else _get_annual(fin_a, "Net Income")
+        
+        # Croissance EPS
+        if fin_a is not None and not fin_a.empty and "Net Income" in fin_a.index and shares:
+            ni_history = fin_a.loc["Net Income"].dropna().sort_index(ascending=False)
+            if len(ni_history) >= 2:
+                eps0 = safe_div(ni_history.iloc[0], shares)
+                eps1 = safe_div(ni_history.iloc[1], shares)
+                feats["eps_yoy"] = ((eps0 / eps1) - 1) * 100 if eps1 and eps1 > 0 else np.nan
+            if len(ni_history) >= 4:
+                eps0 = safe_div(ni_history.iloc[0], shares)
+                eps3 = safe_div(ni_history.iloc[3], shares)
+                feats["eps_cagr_3y"] = cagr(eps3, eps0, 3)
+            if len(ni_history) >= 6:
+                eps0 = safe_div(ni_history.iloc[0], shares)
+                eps5 = safe_div(ni_history.iloc[5], shares)
+                feats["eps_cagr_5y"] = cagr(eps5, eps0, 5)
 
-        # ---------- Valorisation ----------
-        # PE (TTM approximé via net income / shares)
-        if pd.notna(net_income_ttm) and shares and last_price:
-            eps_ttm = safe_div(net_income_ttm, shares)
-            feats["pe_ttm"] = safe_div(last_price, eps_ttm)
+        # EBITDA TTM
+        ebitda_ttm = _sum_last4(fin_q, "EBITDA") if fin_q is not None else _get_annual(fin_a, "EBITDA")
+        if fin_a is not None and not fin_a.empty and "EBITDA" in fin_a.index:
+            eb_history = fin_a.loc["EBITDA"].dropna().sort_index(ascending=False)
+            if len(eb_history) >= 2:
+                feats["ebitda_yoy"] = ((eb_history.iloc[0] / eb_history.iloc[1]) - 1) * 100
 
-        # P/B : market cap / book equity
-        try:
-            if bs_q is not None and not bs_q.empty and mcap:
-                if "Total Stockholder Equity" in bs_q.index:
-                    equity_last = bs_q.loc["Total Stockholder Equity"].iloc[0]
-                    feats["pb_ratio"] = safe_div(mcap, equity_last)
-        except Exception:
-            pass
+        # Operating Income TTM
+        operating_income_ttm = _sum_last4(fin_q, "Operating Income") if fin_q is not None else _get_annual(fin_a, "Operating Income")
+        
+        # Gross Profit TTM
+        gross_profit_ttm = _sum_last4(fin_q, "Gross Profit") if fin_q is not None else _get_annual(fin_a, "Gross Profit")
 
-        # FCF yield : FCF TTM / market cap
-        try:
-            if cf_q is not None and not cf_q.empty and mcap:
-                if "Free Cash Flow" in cf_q.index:
-                    fcf_ttm = cf_q.loc["Free Cash Flow"].iloc[:4].sum(min_count=1)
-                    feats["fcf_yield"] = safe_div(fcf_ttm, mcap) * 100.0
-        except Exception:
-            pass
+        # ========== MARGES (en %) ==========
+        if revenue_ttm and revenue_ttm > 0:
+            if gross_profit_ttm:
+                feats["gross_margin"] = (gross_profit_ttm / revenue_ttm) * 100
+            if operating_income_ttm:
+                feats["operating_margin"] = (operating_income_ttm / revenue_ttm) * 100
+            if net_income_ttm:
+                feats["net_margin"] = (net_income_ttm / revenue_ttm) * 100
+            if ebitda_ttm:
+                feats["ebitda_margin"] = (ebitda_ttm / revenue_ttm) * 100
 
-        # ---------- Croissance (YoY approx) ----------
-        # Revenus YoY (annuel si dispo sinon trimestriel à n-4)
-        try:
-            if fin_a is not None and not fin_a.empty and "Total Revenue" in fin_a.index and fin_a.shape[1] >= 2:
-                rev_latest = fin_a.loc["Total Revenue"].iloc[0]
-                rev_prev = fin_a.loc["Total Revenue"].iloc[1]
-                feats["revenue_yoy"] = safe_div(rev_latest, rev_prev) * 100.0 - 100.0
-            elif fin_q is not None and not fin_q.empty and "Total Revenue" in fin_q.index and fin_q.shape[1] >= 5:
-                rev_latest = fin_q.loc["Total Revenue"].iloc[0]
-                rev_prev = fin_q.loc["Total Revenue"].iloc[4]  # ~n-4 trimestres
-                feats["revenue_yoy"] = safe_div(rev_latest, rev_prev) * 100.0 - 100.0
-        except Exception:
-            pass
+        # ========== FREE CASH FLOW ==========
+        fcf_ttm = _sum_last4(cf_q, "Free Cash Flow") if cf_q is not None else _get_annual(cf_a, "Free Cash Flow")
+        
+        if fcf_ttm and mcap and mcap > 0:
+            feats["fcf_yield"] = (fcf_ttm / mcap) * 100
+        
+        if fcf_ttm and revenue_ttm and revenue_ttm > 0:
+            feats["fcf_margin"] = (fcf_ttm / revenue_ttm) * 100
+        
+        # Croissance FCF
+        if cf_a is not None and not cf_a.empty and "Free Cash Flow" in cf_a.index:
+            fcf_history = cf_a.loc["Free Cash Flow"].dropna().sort_index(ascending=False)
+            if len(fcf_history) >= 2:
+                feats["fcf_yoy"] = ((fcf_history.iloc[0] / fcf_history.iloc[1]) - 1) * 100
 
-        # EPS YoY (EPS ~ NetIncome / shares)
-        try:
-            if shares and pd.notna(shares):
-                if fin_a is not None and not fin_a.empty and "Net Income" in fin_a.index and fin_a.shape[1] >= 2:
-                    eps_latest = safe_div(fin_a.loc["Net Income"].iloc[0], shares)
-                    eps_prev = safe_div(fin_a.loc["Net Income"].iloc[1], shares)
-                    feats["eps_yoy_1y"] = safe_div(eps_latest, eps_prev) * 100.0 - 100.0
-                elif fin_q is not None and not fin_q.empty and "Net Income" in fin_q.index and fin_q.shape[1] >= 5:
-                    eps_latest = safe_div(fin_q.loc["Net Income"].iloc[0], shares)
-                    eps_prev = safe_div(fin_q.loc["Net Income"].iloc[4], shares)
-                    feats["eps_yoy_1y"] = safe_div(eps_latest, eps_prev) * 100.0 - 100.0
-        except Exception:
-            pass
+        # ========== BILAN ==========
+        total_assets = _get_annual(bs_a, "Total Assets") if bs_a is not None else _get_annual(bs_q, "Total Assets")
+        total_equity = _get_annual(bs_a, "Total Stockholder Equity") if bs_a is not None else _get_annual(bs_q, "Total Stockholder Equity")
+        total_debt = _get_annual(bs_a, "Total Debt") if bs_a is not None else _get_annual(bs_q, "Total Debt")
+        cash = _get_annual(bs_a, "Cash And Cash Equivalents") if bs_a is not None else _get_annual(bs_q, "Cash And Cash Equivalents")
+        current_assets = _get_annual(bs_a, "Current Assets") if bs_a is not None else _get_annual(bs_q, "Current Assets")
+        current_liabilities = _get_annual(bs_a, "Current Liabilities") if bs_a is not None else _get_annual(bs_q, "Current Liabilities")
+        inventory = _get_annual(bs_a, "Inventory") if bs_a is not None else _get_annual(bs_q, "Inventory")
+        receivables = _get_annual(bs_a, "Receivables") if bs_a is not None else _get_annual(bs_q, "Receivables")
 
-        # ---------- Leverage & Qualité ----------
-        total_debt = np.nan
-        cash = np.nan
-        total_assets = np.nan
-        equity = np.nan
-        try:
-            if bs_q is not None and not bs_q.empty:
-                if "Total Debt" in bs_q.index:
-                    total_debt = bs_q.loc["Total Debt"].iloc[0]
-                if "Cash And Cash Equivalents" in bs_q.index:
-                    cash = bs_q.loc["Cash And Cash Equivalents"].iloc[0]
-                if "Total Assets" in bs_q.index:
-                    total_assets = bs_q.loc["Total Assets"].iloc[0]
-                if "Total Stockholder Equity" in bs_q.index:
-                    equity = bs_q.loc["Total Stockholder Equity"].iloc[0]
+        # ========== RENTABILITÉ (en %) ==========
+        if net_income_ttm:
+            if total_equity and total_equity > 0:
+                feats["roe"] = (net_income_ttm / total_equity) * 100
+            if total_assets and total_assets > 0:
+                feats["roa"] = (net_income_ttm / total_assets) * 100
 
-            net_debt = (total_debt if pd.notna(total_debt) else 0.0) - (cash if pd.notna(cash) else 0.0)
-            ebitda_proxy = operating_income_ttm  # proxy
-            feats["net_debt_ebitda"] = safe_div(net_debt, ebitda_proxy)
-            feats["debt_equity"] = safe_div(total_debt, equity)
+        # ROIC = NOPAT / Invested Capital
+        if operating_income_ttm:
+            tax_rate = 0.21  # Approximation
+            nopat = operating_income_ttm * (1 - tax_rate)
+            invested_capital = (total_debt if total_debt else 0) + (total_equity if total_equity else 0) - (cash if cash else 0)
+            if invested_capital > 0:
+                feats["roic"] = (nopat / invested_capital) * 100
 
-            if pd.notna(net_income_ttm):
-                feats["roa"] = safe_div(net_income_ttm, total_assets) * 100.0
-                feats["roe"] = safe_div(net_income_ttm, equity) * 100.0
+        # Return on Capital
+        if ebitda_ttm and total_assets and total_assets > 0:
+            feats["roc"] = (ebitda_ttm / total_assets) * 100
 
-            # ROIC ~ NOPAT / (Debt + Equity - Cash)
-            tax_rate = 0.21
-            nopat = (operating_income_ttm * (1 - tax_rate)) if pd.notna(operating_income_ttm) else np.nan
-            invested_capital = (total_debt if pd.notna(total_debt) else 0.0) + (equity if pd.notna(equity) else 0.0) - (cash if pd.notna(cash) else 0.0)
-            feats["roic_ttm"] = safe_div(nopat, invested_capital) * 100.0
-        except Exception:
-            pass
+        # ========== EFFICACITÉ ==========
+        if revenue_ttm and total_assets and total_assets > 0:
+            feats["asset_turnover"] = revenue_ttm / total_assets
+        
+        if revenue_ttm and inventory and inventory > 0:
+            feats["inventory_turnover"] = revenue_ttm / inventory
+        
+        if revenue_ttm and receivables and receivables > 0:
+            feats["receivables_turnover"] = revenue_ttm / receivables
 
-    except Exception:
-        # On laisse tout à NaN si une erreur générale survient
+        # ========== LEVERAGE & LIQUIDITÉ ==========
+        if total_debt and total_equity and total_equity > 0:
+            feats["debt_to_equity"] = total_debt / total_equity
+        
+        if total_debt and total_assets and total_assets > 0:
+            feats["debt_to_assets"] = (total_debt / total_assets) * 100
+        
+        net_debt = (total_debt if total_debt else 0) - (cash if cash else 0)
+        if ebitda_ttm and ebitda_ttm > 0:
+            feats["net_debt_ebitda"] = net_debt / ebitda_ttm
+        
+        # Interest Coverage
+        interest_expense = _get_annual(fin_a, "Interest Expense") if fin_a is not None else np.nan
+        if operating_income_ttm and interest_expense and interest_expense < 0:
+            feats["interest_coverage"] = operating_income_ttm / abs(interest_expense)
+        
+        # Current & Quick Ratio
+        if current_assets and current_liabilities and current_liabilities > 0:
+            feats["current_ratio"] = current_assets / current_liabilities
+            quick_assets = current_assets - (inventory if inventory else 0)
+            feats["quick_ratio"] = quick_assets / current_liabilities
+
+        # ========== DIVIDENDES ==========
+        dividend_per_share = info.get("dividendRate")
+        if dividend_per_share and shares and net_income_ttm and net_income_ttm > 0:
+            total_dividends = dividend_per_share * shares
+            feats["payout_ratio"] = (total_dividends / net_income_ttm) * 100
+        
+        # Croissance dividende 5 ans
+        div_growth = info.get("fiveYearAvgDividendYield")
+        if div_growth:
+            feats["dividend_growth_5y"] = div_growth * 100
+
+    except Exception as e:
+        print(f"⚠️  Erreur pour {ticker}: {str(e)}")
         pass
 
     return feats
@@ -271,7 +379,7 @@ def main():
     ap.add_argument("--companies", default="companies.csv", help="Chemin vers companies.csv")
     ap.add_argument("--outdir", default="data", help="Dossier de sortie (data)")
     ap.add_argument("--ref", default="^GSPC", help="Indice de référence pour le beta")
-    ap.add_argument("--sleep", type=float, default=0.4, help="Pause (sec) entre tickers pour Yahoo")
+    ap.add_argument("--sleep", type=float, default=0.5, help="Pause (sec) entre tickers pour Yahoo")
     args = ap.parse_args()
 
     outdir = Path(args.outdir)
@@ -287,29 +395,21 @@ def main():
     tickers = dfc["ticker"].dropna().astype(str).unique().tolist()
 
     rows = []
-    print(f"→ Téléchargement & calcul des features pour {len(tickers)} tickers ...")
+    print(f"→ Téléchargement & calcul des features AMÉLIORÉES pour {len(tickers)} tickers ...")
+    print(f"📊 Nouvelles métriques : marges %, croissance CAGR %, ratios de liquidité, etc.")
 
-    for t in tqdm(tickers):
+    for t in tqdm(tickers, desc="Processing"):
         row = {"ticker": t}
 
         # Marché
-        row["mom_3m"] = momentum(t, months=3)
-        row["mom_6m"] = momentum(t, months=6)
         row["beta_spx"] = compute_beta(t, ref=args.ref, period="1y")
         row["volatility_30d"] = annualized_vol(t, period="6mo")
 
-        # Fondamentaux
+        # Fondamentaux améliorés
         feats = fundamentals_features(t)
-        # On remplace les clés marché par celles calculées au-dessus (au cas où)
-        feats["mom_3m"] = row["mom_3m"]
-        feats["mom_6m"] = row["mom_6m"]
-        feats["beta_spx"] = row["beta_spx"]
-        feats["volatility_30d"] = row["volatility_30d"]
+        row.update(feats)
 
-        out = {"ticker": t}
-        out.update(feats)
-        rows.append(out)
-
+        rows.append(row)
         time.sleep(max(0.0, args.sleep))
 
     feats_df = pd.DataFrame(rows)
@@ -324,8 +424,16 @@ def main():
     feats_df.to_csv(out_file, index=False, encoding="utf-8")
     feats_df.to_csv(outdir / "features_latest.csv", index=False, encoding="utf-8")
 
-    print(f"✅ Features sauvegardées : {out_file}")
+    print(f"\n✅ Features améliorées sauvegardées : {out_file}")
     print(f"🔗 Alias mis à jour : {outdir / 'features_latest.csv'}")
+    print(f"\n📊 Métriques calculées par ticker :")
+    print(f"   • Momentum : 1m, 3m, 6m, 12m")
+    print(f"   • Valorisation : PE, PEG, PS, PB, EV/EBITDA, FCF Yield, Dividend Yield")
+    print(f"   • Croissance : Revenue YoY/CAGR 3y/5y, EPS YoY/CAGR 3y/5y")
+    print(f"   • Marges : Brute, Opérationnelle, Nette, EBITDA, FCF (toutes en %)")
+    print(f"   • Rentabilité : ROE, ROA, ROIC, ROC (toutes en %)")
+    print(f"   • Liquidité : Current Ratio, Quick Ratio, Interest Coverage")
+    print(f"   • Efficacité : Asset/Inventory/Receivables Turnover")
 
 
 if __name__ == "__main__":

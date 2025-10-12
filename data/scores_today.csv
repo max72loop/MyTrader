@@ -1,21 +1,21 @@
-ticker,name,sector,region,style,z_momentum,z_valuation,z_growth,z_quality,z_risk,score_raw,score_adj,score,profile,date
-SE,Sea Ltd,Ecommerce/Fintech,Asia,Growth,0.506,0.216,0.9,-0.233,0.683,0.485,3.0,3.485,growth,11-10-25
-TSM,TSMC,Semiconductors,Asia,Blend,0.544,0.55,0.247,0.704,0.197,0.438,3.0,3.438,growth,11-10-25
-UBER,Uber Technologies,Mobility,US,Growth,-0.308,-0.255,1.344,0.146,0.11,0.408,3.0,3.408,growth,11-10-25
-GOOGL,Alphabet,Tech,US,Blend,0.92,-0.225,-0.194,1.158,-0.099,0.361,3.0,3.361,growth,11-10-25
-NU,Nu Holdings,Fintech,LatAm,Growth,0.286,-0.141,0.799,-0.285,0.491,0.329,3.0,3.329,growth,11-10-25
-ATAT,Atour Lifestyle,Hospitality,China,Growth,-0.312,0.135,0.897,-0.002,-0.131,0.236,3.0,3.236,growth,11-10-25
-MELI,MercadoLibre,Ecommerce/Fintech,LatAm,Growth,-0.58,0.023,0.605,-0.145,0.033,0.043,3.0,3.043,growth,11-10-25
-ASR,Grupo Aeroportuario del Sureste,Infrastructure,LatAm,Value,-0.216,0.754,-0.044,0.354,-0.465,0.03,3.0,3.03,growth,11-10-25
-AMZN,Amazon,Ecommerce,US,Growth,-0.292,-0.2,0.027,0.059,0.174,-0.054,3.0,2.946,growth,11-10-25
-1810.HK,Xiaomi,Consumer Electronics,China,Growth,-0.517,0.426,0.269,-1.291,-0.082,-0.259,3.0,2.741,growth,11-10-25
-SPHR,Sphere Entertainment,Entertainment,US,Turnaround,1.0,-0.808,0.343,-0.788,0.706,0.202,0.0,0.202,growth,11-10-25
-TKO,TKO Group Holdings,Media & Sports,US,Blend,0.087,0.122,0.35,0.117,0.028,0.183,0.0,0.183,growth,11-10-25
-GRAB,Grab Holdings,SuperApp,Asia,Growth,0.441,0.784,-0.629,-0.474,-0.331,-0.159,0.0,-0.159,growth,11-10-25
-ZTS,Zoetis,Healthcare,US,Blend,-0.569,-0.212,-0.459,0.901,-0.464,-0.19,0.0,-0.19,growth,11-10-25
-PEP,PepsiCo,Consumer Defensive,US,Value,0.18,-0.193,-0.635,0.035,-0.565,-0.246,0.0,-0.246,growth,11-10-25
-BAKKA.OL,Bakkafrost,Food,Europe,Value,-0.08,0.375,-0.763,-0.092,0.14,-0.254,0.0,-0.254,growth,11-10-25
-D05.SI, DBS Group Holdings Ltd, Bank,Singapour,,0.432,-0.215,-0.385,-0.433,-1.241,-0.259,0.0,-0.259,growth,11-10-25
-BYD,BYD Company,Automotive,China,Growth,-0.348,-0.238,-0.591,0.12,-0.065,-0.3,0.0,-0.3,growth,11-10-25
-PYPL,PayPal,Fintech,US,Blend,-0.464,-0.209,-0.533,-0.0,0.177,-0.306,0.0,-0.306,growth,11-10-25
-MQ,Marqeta,Fintech,US,Growth,-0.71,-0.621,-1.55,-0.281,0.516,-0.787,0.0,-0.787,growth,11-10-25
+ticker,name,sector,region,style,z_momentum,z_valuation,z_growth,z_quality,z_risk,z_efficiency,score_raw,score_adj,score,data_completeness,profile,date
+TSM,TSMC,Semiconductors,Asia,Blend,0.551,0.517,0.168,0.947,0.25,0.174,0.444,21.0,100.0,74.4,growth,12-10-25
+ASR,Grupo Aeroportuario del Sureste,Infrastructure,LatAm,Value,-0.294,1.203,0.067,0.65,0.814,0.813,0.337,19.0,94.08,74.4,growth,12-10-25
+ATAT,Atour Lifestyle,Hospitality,China,Growth,-0.425,0.443,0.736,0.294,0.146,0.652,0.323,17.0,88.43,74.4,growth,12-10-25
+MELI,MercadoLibre,Ecommerce/Fintech,LatAm,Growth,-0.406,-0.567,0.734,0.032,-0.299,0.363,0.114,12.0,73.8,72.1,growth,12-10-25
+ZTS,Zoetis,Healthcare,US,Blend,-0.325,-0.279,-0.232,0.698,-0.475,-0.023,-0.083,9.0,64.82,74.4,growth,12-10-25
+NU,Nu Holdings,Fintech,LatAm,Growth,0.074,-0.417,0.753,0.085,0.43,-0.236,0.285,7.0,60.24,46.5,growth,12-10-25
+GOOGL,Alphabet,Tech,US,Blend,0.418,-0.286,-0.056,0.729,0.225,0.262,0.217,6.0,57.24,69.8,growth,12-10-25
+UBER,Uber Technologies,Mobility,US,Growth,-0.066,-0.01,0.63,0.168,-0.165,0.664,0.257,4.0,51.73,65.1,growth,12-10-25
+SE,Sea Ltd,Ecommerce/Fintech,Asia,Growth,0.053,-0.874,0.34,-0.221,-0.104,0.284,0.002,3.0,48.21,69.8,growth,12-10-25
+D05.SI, DBS Group Holdings Ltd, Bank,Singapour,,0.348,0.51,-0.141,-0.082,0.281,-1.369,0.014,2.0,45.43,44.2,growth,12-10-25
+GRAB,Grab Holdings,SuperApp,Asia,Growth,0.462,-1.625,-0.827,-0.532,0.962,-0.339,-0.386,2.0,44.31,67.4,growth,12-10-25
+AMZN,Amazon,Ecommerce,US,Growth,-0.202,-0.072,0.03,0.031,-0.24,0.111,-0.049,0.0,39.64,72.1,growth,12-10-25
+1810.HK,Xiaomi,Consumer Electronics,China,Growth,-0.338,-0.055,-0.017,-0.568,-0.049,-0.511,-0.223,0.0,39.15,62.8,growth,12-10-25
+PEP,PepsiCo,Consumer Defensive,US,Value,0.298,0.063,-0.281,-0.07,-0.738,-0.029,-0.122,-3.0,31.01,74.4,growth,12-10-25
+TKO,TKO Group Holdings,Media & Sports,US,Blend,-0.09,-0.355,0.028,-0.12,-0.282,0.308,-0.08,-5.0,25.51,69.8,growth,12-10-25
+PYPL,PayPal,Fintech,US,Blend,0.033,0.485,-0.272,-0.199,0.013,-0.597,-0.108,-5.0,25.43,67.4,growth,12-10-25
+BAKKA.OL,Bakkafrost,Food,Europe,Value,0.164,-0.146,-0.582,-0.43,0.34,-0.966,-0.286,-7.0,19.31,72.1,growth,12-10-25
+MQ,Marqeta,Fintech,US,Growth,-0.671,0.508,-0.701,-0.729,0.803,-0.336,-0.411,-7.0,18.96,60.5,growth,12-10-25
+BYD,BYD Company,Automotive,China,Growth,-0.195,0.396,-0.278,0.046,-0.842,0.826,-0.13,-8.0,16.94,74.4,growth,12-10-25
+SPHR,Sphere Entertainment,Entertainment,US,Turnaround,0.61,0.666,-0.217,-0.786,-0.615,-1.131,-0.163,-14.0,0.0,65.1,growth,12-10-25

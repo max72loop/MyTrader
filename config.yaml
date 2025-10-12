@@ -1,64 +1,320 @@
+# config.yaml - VERSION AMÉLIORÉE
+# Configuration pour le calcul de scores avec métriques en pourcentage
+
 # Dossiers de sortie
 output_dir: "data"
 scores_history_file: "data/scores_history.csv"
 
-# Colonnes de features (pour le calcul de confiance)
+# Colonnes de features par catégorie (AMÉLIORÉES)
 feature_columns:
-  momentum: ["mom_3m", "mom_6m"]
-  valuation: ["pe_ttm", "fcf_yield", "pb_ratio"]
-  growth: ["rev_cagr_3y", "eps_cagr_3y", "revenue_yoy", "eps_yoy_1y"]
-  quality: ["gross_margin_ttm", "oper_margin", "roe", "roa", "roic_ttm"]
-  risk: ["beta_spx", "net_debt_ebitda", "volatility_30d", "debt_equity"]
+  momentum:
+    - mom_1m
+    - mom_3m
+    - mom_6m
+    - mom_12m
+    - beta_spx  # Beta (lower is better pour risk-adjusted)
+  
+  valuation:
+    - pe_ttm
+    - pe_forward
+    - peg_ratio
+    - ps_ratio
+    - pb_ratio
+    - ev_ebitda
+    - fcf_yield  # % - higher is better
+    - earnings_yield  # % - higher is better
+    - dividend_yield  # % - higher is better
+  
+  growth:
+    - revenue_yoy  # %
+    - revenue_cagr_3y  # %
+    - revenue_cagr_5y  # %
+    - eps_yoy  # %
+    - eps_cagr_3y  # %
+    - eps_cagr_5y  # %
+    - ebitda_yoy  # %
+    - fcf_yoy  # %
+  
+  quality:
+    - gross_margin  # %
+    - operating_margin  # %
+    - net_margin  # %
+    - ebitda_margin  # %
+    - fcf_margin  # %
+    - roe  # %
+    - roa  # %
+    - roic  # %
+    - roc  # %
+    - asset_turnover
+    - interest_coverage
+  
+  risk:
+    - volatility_30d  # % - lower is better
+    - debt_to_equity
+    - debt_to_assets  # %
+    - net_debt_ebitda
+    - current_ratio  # higher is better
+    - quick_ratio  # higher is better
+  
+  efficiency:
+    - asset_turnover
+    - inventory_turnover
+    - receivables_turnover
+    - fcf_margin  # %
 
-# Profils d'agrégation
+# Profils d'agrégation AMÉLIORÉS
 profiles:
   growth:
+    description: "Focus sur la croissance rapide et le momentum"
     weights:
-      momentum: 0.25
+      momentum: 0.20
       valuation: 0.10
-      growth:   0.35
-      quality:  0.20
-      risk:     0.10
+      growth: 0.35
+      quality: 0.20
+      risk: 0.10
+      efficiency: 0.05
     ema_halflife_days: 10
+    thresholds:
+      min_revenue_cagr_3y: 15  # % minimum
+      min_eps_cagr_3y: 20  # % minimum
+      max_pe_ttm: 50
+  
   value:
+    description: "Focus sur la valorisation attractive et la qualité"
+    weights:
+      momentum: 0.10
+      valuation: 0.35
+      growth: 0.10
+      quality: 0.30
+      risk: 0.10
+      efficiency: 0.05
+    ema_halflife_days: 14
+    thresholds:
+      max_pe_ttm: 20
+      min_fcf_yield: 5  # %
+      min_dividend_yield: 2  # %
+      max_debt_to_equity: 1.5
+  
+  quality:
+    description: "Focus sur la rentabilité et la solidité financière"
     weights:
       momentum: 0.15
-      valuation: 0.35
-      growth:   0.15
-      quality:  0.25
-      risk:     0.10
-    ema_halflife_days: 14
-  blend:
-    weights:
-      momentum: 0.22
-      valuation: 0.20
-      growth:   0.23
-      quality:  0.20
-      risk:     0.15
+      valuation: 0.15
+      growth: 0.15
+      quality: 0.40
+      risk: 0.10
+      efficiency: 0.05
     ema_halflife_days: 12
-  turnaround:
+    thresholds:
+      min_roe: 15  # %
+      min_roic: 12  # %
+      min_operating_margin: 15  # %
+      min_current_ratio: 1.5
+      max_debt_to_equity: 1.0
+  
+  blend:
+    description: "Approche équilibrée sur tous les facteurs"
     weights:
-      momentum: 0.28
-      valuation: 0.22
-      growth:   0.20
-      quality:  0.15
-      risk:     0.15
-    ema_halflife_days: 10
+      momentum: 0.18
+      valuation: 0.20
+      growth: 0.20
+      quality: 0.22
+      risk: 0.12
+      efficiency: 0.08
+    ema_halflife_days: 12
+    thresholds:
+      min_revenue_cagr_3y: 10  # %
+      max_pe_ttm: 30
+      min_roe: 12  # %
+  
+  turnaround:
+    description: "Focus sur le momentum et l'amélioration récente"
+    weights:
+      momentum: 0.35
+      valuation: 0.15
+      growth: 0.25
+      quality: 0.15
+      risk: 0.05
+      efficiency: 0.05
+    ema_halflife_days: 7
+    thresholds:
+      min_mom_3m: 10  # % minimum
+      min_revenue_yoy: 5  # %
+  
+  dividend:
+    description: "Focus sur les dividendes et la stabilité"
+    weights:
+      momentum: 0.10
+      valuation: 0.25
+      growth: 0.10
+      quality: 0.35
+      risk: 0.15
+      efficiency: 0.05
+    ema_halflife_days: 20
+    thresholds:
+      min_dividend_yield: 2  # %
+      max_payout_ratio: 70  # %
+      min_current_ratio: 1.5
+      max_debt_to_equity: 1.0
 
-# Pénalités / Bonus liés aux événements
+# Pénalités / Bonus liés aux événements (en points)
 penalties:
-  earnings_miss_threshold_pct: -5      # Surprise EPS < -5% → pénalité
-  earnings_miss_points: -5
-  high_leverage_threshold: 3           # Net Debt/EBITDA > 3 → pénalité
-  high_leverage_points: -4
+  # Croissance négative
+  negative_revenue_growth: -5
+  negative_eps_growth: -5
+  
+  # Leverage élevé
+  high_debt_to_equity_threshold: 3
+  high_debt_to_equity_points: -8
+  
+  high_net_debt_ebitda_threshold: 5
+  high_net_debt_ebitda_points: -6
+  
+  # Faible liquidité
+  low_current_ratio_threshold: 1.0
+  low_current_ratio_points: -5
+  
+  # Marges faibles
+  low_operating_margin_threshold: 5  # %
+  low_operating_margin_points: -4
+  
+  # Volatilité excessive
+  high_volatility_threshold: 50  # %
+  high_volatility_points: -3
+  
+  # PE trop élevé sans croissance
+  high_pe_low_growth_pe_threshold: 40
+  high_pe_low_growth_growth_threshold: 10  # %
+  high_pe_low_growth_points: -6
 
 bonuses:
-  eps_growth_strong_threshold_pct: 15  # EPS YoY > +15% → bonus
-  eps_growth_strong_points: 3
-  insider_buy_points: 2
+  # Forte croissance
+  strong_revenue_cagr_3y_threshold: 20  # %
+  strong_revenue_cagr_3y_points: 4
+  
+  strong_eps_cagr_3y_threshold: 25  # %
+  strong_eps_cagr_3y_points: 5
+  
+  # Excellentes marges
+  excellent_operating_margin_threshold: 25  # %
+  excellent_operating_margin_points: 4
+  
+  excellent_fcf_margin_threshold: 20  # %
+  excellent_fcf_margin_points: 3
+  
+  # Haute rentabilité
+  excellent_roe_threshold: 25  # %
+  excellent_roe_points: 5
+  
+  excellent_roic_threshold: 20  # %
+  excellent_roic_points: 4
+  
+  # Valorisation attractive avec croissance
+  attractive_peg_threshold: 1.0
+  attractive_peg_points: 3
+  
+  high_fcf_yield_threshold: 8  # %
+  high_fcf_yield_points: 3
+  
+  # Dividendes attrayants
+  high_dividend_yield_threshold: 4  # %
+  high_dividend_yield_points: 2
+  
+  # Momentum fort
+  strong_mom_6m_threshold: 20  # %
+  strong_mom_6m_points: 3
+  
+  # Solidité financière
+  excellent_current_ratio_threshold: 2.5
+  excellent_current_ratio_points: 2
+  
+  low_debt_to_equity_threshold: 0.3
+  low_debt_to_equity_points: 3
 
-# Pondérations pour la "confiance"
+# Pondérations pour la "confiance" du score
 confidence_weights:
-  data_completeness: 0.45
-  recency: 0.30
-  volatility: 0.25
+  data_completeness: 0.40  # % de métriques disponibles
+  recency: 0.30  # Fraîcheur des données
+  volatility: 0.15  # Stabilité du score
+  consistency: 0.15  # Cohérence entre catégories
+
+# Seuils de qualité pour filtrage
+quality_filters:
+  min_data_completeness: 0.60  # 60% des métriques doivent être disponibles
+  min_market_cap_usd: 1000000000  # 1 milliard USD minimum
+  min_avg_volume: 100000  # Volume quotidien minimum
+
+# Affichage et formatage
+display:
+  decimal_places: 2
+  percentage_metrics:
+    - mom_1m
+    - mom_3m
+    - mom_6m
+    - mom_12m
+    - revenue_yoy
+    - revenue_cagr_3y
+    - revenue_cagr_5y
+    - eps_yoy
+    - eps_cagr_3y
+    - eps_cagr_5y
+    - gross_margin
+    - operating_margin
+    - net_margin
+    - ebitda_margin
+    - fcf_margin
+    - roe
+    - roa
+    - roic
+    - roc
+    - fcf_yield
+    - earnings_yield
+    - dividend_yield
+    - volatility_30d
+    - debt_to_assets
+    - ebitda_yoy
+    - fcf_yoy
+  
+  ratio_metrics:
+    - pe_ttm
+    - pe_forward
+    - peg_ratio
+    - ps_ratio
+    - pb_ratio
+    - ev_ebitda
+    - debt_to_equity
+    - net_debt_ebitda
+    - current_ratio
+    - quick_ratio
+    - asset_turnover
+    - inventory_turnover
+    - receivables_turnover
+    - interest_coverage
+  
+  category_colors:
+    momentum: "#667eea"
+    valuation: "#f093fb"
+    growth: "#4facfe"
+    quality: "#43e97b"
+    risk: "#fa709a"
+    efficiency: "#ffa502"
+  
+  score_ranges:
+    excellent:
+      min: 70
+      color: "#43e97b"
+      label: "Excellente opportunité"
+    good:
+      min: 50
+      max: 70
+      color: "#4facfe"
+      label: "Opportunité moyenne"
+    fair:
+      min: 30
+      max: 50
+      color: "#ffa502"
+      label: "À surveiller"
+    poor:
+      max: 30
+      color: "#fa709a"
+      label: "Éviter"
